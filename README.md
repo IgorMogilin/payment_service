@@ -2,8 +2,6 @@
 
 Асинхронный микросервис процессинга платежей. Принимает запросы на оплату, обрабатывает их через эмуляцию платёжного шлюза и уведомляет клиента о результате через webhook.
 
-> Тестовое задание на позицию Python Backend Developer.
-
 ## Архитектура
 
 ```
@@ -258,11 +256,3 @@ uv run alembic downgrade -1
 | `PAYMENT_SUCCESS_RATE` | `0.9` | Вероятность успеха (90%) |
 | `WEBHOOK_MAX_RETRIES` | `3` | Максимум попыток доставки вебхука |
 | `MAX_PROCESSING_RETRIES` | `3` | Попыток обработки до отправки в DLQ |
-
-## Возможные улучшения (вне рамок ТЗ)
-
-- Интеграционные тесты (pytest + httpx TestClient)
-- Метрики (Prometheus) и трейсинг (OpenTelemetry)
-- Circuit breaker для webhook-доставки
-- Graceful shutdown для consumer
-- Kubernetes manifests
