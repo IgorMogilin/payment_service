@@ -1,16 +1,48 @@
-# This is a sample Python script.
+import asyncio
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+from fastapi import FastAPI
+from faststream.rabbit import RabbitBroker
+
+from app.api.routes.payments import router as payments_router
+from app.core.config import get_settings
+from app.services.outbox_publisher import publish_outbox_messages
+
+settings = get_settings()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f"Hi, {name}")  # Press ⌘F8 to toggle the breakpoint.
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Старт/остановка фоновых задач: RabbitMQ + outbox poller."""
+    broker = RabbitBroker(settings.RABBITMQ_URL)
+    await broker.start()
+    logger.info("Connected to RabbitMQ")
+
+    poller = asyncio.create_task(publish_outbox_messages(broker))
+
+    yield
+
+    poller.cancel()
+    await broker.stop()
+    logger.info("Shutdown complete")
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == "__main__":
-    print_hi("PyCharm")
+app = FastAPI(
+    title=settings.APP_NAME,
+    version="1.0.0",
+    lifespan=lifespan,
+)
+app.include_router(payments_router)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+@app.get("/health", tags=["System"])
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
