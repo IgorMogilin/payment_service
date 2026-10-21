@@ -9,6 +9,7 @@ RUN uv sync --frozen --no-dev
 FROM python:3.12-slim
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /bin/uv /usr/local/bin/uv
 COPY --from=builder /app .
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000

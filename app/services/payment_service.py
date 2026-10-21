@@ -42,6 +42,8 @@ async def create_payment(
             "amount": str(payment.amount),
             "currency": payment.currency,
             "webhook_url": payment.webhook_url,
+            "idempotency_key": payment.idempotency_key,
+            "metadata": payment.metadata_,
         },
     )
     db.add(outbox)

@@ -32,8 +32,12 @@ dlq_queue = RabbitQueue("payments.dead", durable=True)
 
 async def process_payment_message(body: bytes) -> None:
     """Основная логика: эмуляция → обновление БД → webhook."""
-    data = json.loads(body)
-    payment_id = UUID(data["payment_id"])
+    try:
+        data = json.loads(body)
+        payment_id = UUID(data["payment_id"])
+    except (json.JSONDecodeError, KeyError, ValueError):
+        logger.error("Invalid message payload: %s", body.decode(errors="replace"))
+        raise
     logger.info("Processing payment %s", payment_id)
     delay = random.uniform(settings.PAYMENT_MIN_DELAY, settings.PAYMENT_MAX_DELAY)
     await asyncio.sleep(delay)

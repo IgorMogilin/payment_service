@@ -23,7 +23,10 @@ broker = RabbitBroker(settings.RABBITMQ_URL)
 app = FastStream(broker)
 
 
-@broker.subscriber(payment_queue, exchange=payment_exchange)
+@broker.subscriber(
+    payment_queue,
+    exchange=payment_exchange,
+)
 async def on_payment_message(body: bytes) -> None:
     """Обработчик: если бросит исключение → сообщение в DLQ."""
     await process_payment_message(body)

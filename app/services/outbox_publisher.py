@@ -26,7 +26,7 @@ async def publish_outbox_messages(broker: RabbitBroker) -> None:
                 stmt = (
                     select(OutboxMessage)
                     .where(
-                        OutboxMessage.published == False,  # noqa: E712
+                        OutboxMessage.published.is_(False),
                         OutboxMessage.scheduled_at <= datetime.now(UTC),
                     )
                     .order_by(OutboxMessage.created_at)
@@ -50,11 +50,21 @@ async def publish_outbox_messages(broker: RabbitBroker) -> None:
                         )
                     except Exception:
                         msg.retry_count += 1
-                        logger.exception(
-                            "Outbox publish failed: %s (retry #%d)",
-                            msg.id,
-                            msg.retry_count,
-                        )
+                        if msg.retry_count >= settings.MAX_PROCESSING_RETRIES:
+                            msg.published = True
+                            logger.error(
+                                "Outbox message %s gave up after %d retries (payment %s)",
+                                msg.id,
+                                msg.retry_count,
+                                msg.aggregate_id,
+                            )
+                        else:
+                            logger.exception(
+                                "Outbox publish failed: %s (retry #%d/%d)",
+                                msg.id,
+                                msg.retry_count,
+                                settings.MAX_PROCESSING_RETRIES,
+                            )
 
                 await session.commit()
 
