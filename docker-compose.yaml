@@ -1,4 +1,5 @@
 services:
+  # ─── PostgreSQL ─────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     environment:
@@ -15,6 +16,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # ─── RabbitMQ ───────────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     ports:
@@ -29,6 +31,7 @@ services:
       timeout: 10s
       retries: 5
 
+  # ─── Миграции БД (одноразовый контейнер) ────────────────────
   migrate:
     build: .
     command: uv run alembic upgrade head
@@ -40,6 +43,7 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # ─── API сервер ─────────────────────────────────────────────
   api:
     build: .
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -57,9 +61,10 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # ─── Consumer ───────────────────────────────────────────────
   consumer:
     build: .
-    command: python -m app.consumer.main
+    command: uv run faststream run app.consumer.main:app
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-payments_db}
